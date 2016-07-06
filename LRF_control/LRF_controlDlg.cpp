@@ -6,7 +6,7 @@
 #include "LRF_control.h"
 #include "LRF_controlDlg.h"
 #include "afxdialogex.h"
-#include "RSocket.h"
+//#include "RSocket.h"
 #include "CvvImage.cpp"  
 #include "Serial.cpp"
 #define WNU_THREAD_EXIT (WM_USER + 1)
@@ -21,7 +21,8 @@ double  CLRF_controlDlg::vr_draw = 0, CLRF_controlDlg::vl_draw = 0;
 double  CLRF_controlDlg::target_pos[3] = { 0 };
 int CLRF_controlDlg::sampleTime = 0;
 bool CLRF_controlDlg::carFLAG = true;
-double CRSocket::m_pose_data_static[SIZE_POSE_DATA] = { 0 };
+//double CRSocket::m_pose_data_static[SIZE_POSE_DATA] = { 0 };
+PoseData CPSocket::m_pose_data_2;
 CSerial Connect_I90;
 
 struct THREAD_INFO_TARGET_control
@@ -73,9 +74,12 @@ protected:
 	DECLARE_MESSAGE_MAP()
 };
 
-CRSocket::CRSocket() {}
+CPSocket::CPSocket()
+{
+	memset(&m_pose_data, 0, sizeof(PoseData));
+}
 
-CRSocket::~CRSocket() {}
+CPSocket::~CPSocket() {}
 
 CAboutDlg::CAboutDlg() : CDialogEx(IDD_ABOUTBOX)
 {
@@ -152,10 +156,9 @@ BOOL CLRF_controlDlg::OnInitDialog()
 	m_PATH_c.SetWindowPos(&wndTop, 10, 10, 700, 700, SWP_SHOWWINDOW);
 
 	AfxSocketInit();
-	m_socket.registerParent(this);
+	m_socket_pose.registerParent(this);
 	m_socket_ip_c.SetAddress(192, 168, 1, 210);
-	m_socket_port = 25650;
-
+	m_socket_pose_port = 25652;
 
 	UpdateData(false);
 
@@ -215,20 +218,24 @@ HCURSOR CLRF_controlDlg::OnQueryDragIcon()
 
 void CLRF_controlDlg::OnBnClickedSocketConnect()
 {
-	if (fg_connected) {
-		DoSocketDisconnect();
+	if (fg_pose_connected)
+	{
+		if (fg_pose_connected) DoPoseSocketDisconnect();
 	}
-	else {
-		DoSocketConnect();
+	else
+	{
+		// If all socket not connect yet
+		DoPoseSocketConnect();
 	}
-	m_socket_connect_c.SetCheck(fg_connected);
+
+	m_socket_connect_c.SetCheck(fg_pose_connected);
+
 
 }
 
-void CLRF_controlDlg::DoSocketConnect() {
-
-	// Sync the Panel data to the model
-	UpdateData(TRUE);
+void CLRF_controlDlg::DoPoseSocketConnect()
+{
+	UpdateData(true);
 
 	// Read the TCP/IP address setting from User
 	byte aIpAddressUnit[4];
@@ -240,91 +247,90 @@ void CLRF_controlDlg::DoSocketConnect() {
 
 	// Create a TCP Socket for transfer Camera data
 	// m_tcp_socket.Create(m_tcp_ip_port, 1, aStrIpAddress);
-	if (!m_socket.Create()) {
+	if (!m_socket_pose.Create()) {
 
 		// If Socket Create Fail Report Message
 		TCHAR szMsg[1024] = { 0 };
-		wsprintf(szMsg, _T("create faild: %d"), m_socket.GetLastError());
-		ReportSocketStatus(TCPEvent::CREATE_SOCKET_FAIL);
+		wsprintf(szMsg, _T("Pose socket create faild: %d"), m_socket_pose.GetLastError());
+		ReportSocketStatus(TCPEvent::CREATE_SOCKET_FAIL, CString("Pose Socket"));
 		AfxMessageBox(szMsg);
 	}
 	else {
 
-		ReportSocketStatus(TCPEvent::CREATE_SOCKET_SUCCESSFUL);
+		ReportSocketStatus(TCPEvent::CREATE_SOCKET_SUCCESSFUL, CString("Pose Socket"));
 		// Connect to the Server ( Raspberry Pi Server )
-		fg_connected = m_socket.Connect(aStrIpAddress, m_socket_port);
-
-		//fg_tcp_ip_read = true;
-		//m_tcp_ip_IOHandle_thread = AfxBeginThread(TcpIODataHandler, LPVOID(this));
+		fg_pose_connected = m_socket_pose.Connect(aStrIpAddress, m_socket_pose_port);
 
 		//For Test
-		m_socket.Send("Test from here", 14);
+		m_socket_pose.Send("Test from here", 14);
 	}
 
-	if (fg_connected)
+	if (fg_pose_connected)
 		ReportSocketStatus(TCPEvent::CONNECT_SUCCESSFUL, aStrIpAddress);
 	else
+	{
 		ReportSocketStatus(TCPEvent::CONNECT_FAIL, aStrIpAddress);
-
-
-
+		m_socket_pose.Close();
+	}
 }
 
-void CLRF_controlDlg::DoSocketDisconnect() {
+void CLRF_controlDlg::DoPoseSocketDisconnect()
+{
 	// Setup Connect-staus flag
-	fg_connected = false;
+	fg_pose_connected = false;
 	//fg_tcp_ip_read = false;
 
 	// Close the TCP/IP Socket
-	m_socket.Close();
+	m_socket_pose.Close();
 
 	// Report TCP/IP connect status
-	CString tmp_log; tmp_log.Format(_T("I/O event: %s"), _T("Close Socket"));
+	CString tmp_log; tmp_log.Format(_T("I/O event: %s"), _T("Close Pose Socket"));
 	m_socket_log_c.AddString(tmp_log);
 }
 
-void CLRF_controlDlg::ReportSocketStatus(TCPEvent event_, CString &msg) {
+void CLRF_controlDlg::ReportSocketStatus(TCPEvent event_, CString &msg) 
+{
 	CString tmp_log;
+	CTime current_time = CTime::GetCurrentTime();
+	tmp_log.Format(_T("[ %02d點%02d分%02d秒: ] "),
+		current_time.GetHour(), current_time.GetMinute(), current_time.GetSecond());
 	switch (event_) {
 	case CREATE_SOCKET_SUCCESSFUL:
-		tmp_log.Format(_T("I/O event: %s"),
-			_T("Create Socket Successful"));
+		tmp_log.AppendFormat(_T("I/O event: %s <%s>"),
+			_T("Create Socket Successful"), msg);
 		break;
 	case CREATE_SOCKET_FAIL:
-		tmp_log.Format(_T("I/O event: %s"),
-			_T("Create Socket Fail"));
+		tmp_log.AppendFormat(_T("I/O event: %s"),
+			_T("Create Socket Fail <%s>"), msg);
 		break;
 	case CONNECT_SUCCESSFUL:
-		tmp_log.Format(_T("I/O event: %s%s%s"),
+		tmp_log.AppendFormat(_T("I/O event: %s%s%s"),
 			_T("Connect "), msg, _T(" Successful"));
 		break;
 	case CONNECT_FAIL:
-		tmp_log.Format(_T("I/O event: %s%s%s"),
+		tmp_log.AppendFormat(_T("I/O event: %s%s%s"),
 			_T("Connect "), msg, _T(" Fail"));
 		break;
 	case DISCONNECT:
-		tmp_log.Format(_T("I/O event: %s"),
+		tmp_log.AppendFormat(_T("I/O event: %s"),
 			_T("Disconnect"));
 		break;
 	case SEND_MESSAGE_SUCCESSFUL:
-		tmp_log.Format(_T("I/O event: %s%s%s"),
+		tmp_log.AppendFormat(_T("I/O event: %s%s%s"),
 			_T("Sent Message"), msg, _T("Successful"));
 		break;
 	case SENT_MESSAGE_FAIL:
-		tmp_log.Format(_T("I/O event: %s%s%s"),
+		tmp_log.AppendFormat(_T("I/O event: %s%s%s"),
 			_T("Sent Message"), msg, _T("Fail"));
 		break;
 	}
 	m_socket_log_c.AddString(tmp_log);
 }
 
-template<size_t LENGTH> void CLRF_controlDlg::SendSocketMessage(char(&data)[LENGTH]) {
+template<size_t LENGTH> void CLRF_controlDlg::SendSocketMessage(char(&data)[LENGTH])
+{
 
-	// Send Message
-	if (fg_tcp_ip_connected) {
-		m_tcp_socket.Send(data, LENGTH);
-		ReportTCPStatus(TCPEvent::SEND_MESSAGE_SUCCESSFUL, CString(data));
-	}
+	
 }
 
 void CLRF_controlDlg::OnBnClickedconnect()
@@ -375,9 +381,9 @@ UINT CLRF_controlDlg::ThreadFun_TARGET_control(LPVOID lParam)
 	CStatic * Static_num7 = (CStatic *)hWnd->GetDlgItem(IDC_STATIC_VR);
 	CStatic * Static_num8 = (CStatic *)hWnd->GetDlgItem(IDC_STATIC_VL);
 
-	target_pos[0] = 1;
-	target_pos[1] = 1;
-	target_pos[2] = PI / 2;  //旋轉角
+	target_pos[0] = -0;
+	target_pos[1] = 0;
+	target_pos[2] = 0;  //旋轉角
 
 	int state = 1;
 	int rho_gain;
@@ -401,9 +407,9 @@ UINT CLRF_controlDlg::ThreadFun_TARGET_control(LPVOID lParam)
 
 	while (carFLAG)
 	{
-		car_x = CRSocket::m_pose_data_static[0] - 1 /*+ (double)rand() / (RAND_MAX + 1.0) * 4*/;
-		car_y = CRSocket::m_pose_data_static[1] - 1 /*+ (double)rand() / (RAND_MAX + 1.0) * 4*/;
-		car_zdir = CRSocket::m_pose_data_static[2] + 0 /*+ (double)rand() / (RAND_MAX + 1.0) * 6*/;
+		car_x = CPSocket::m_pose_data_2.pose_position[0] - 1 /*+ (double)rand() / (RAND_MAX + 1.0) * 4*/;
+		car_y = CPSocket::m_pose_data_2.pose_position[1] - 1 /*+ (double)rand() / (RAND_MAX + 1.0) * 4*/;
+		car_zdir = CPSocket::m_pose_data_2.pose_orientation[2] + PI/6 /*+ (double)rand() / (RAND_MAX + 1.0) * 6*/;
 
 
 		phi = car_zdir;
@@ -679,7 +685,7 @@ UINT CLRF_controlDlg::ThreadFun_car_draw(LPVOID lParam)
 
 	int carsize = 20;
 	int speedLineSize = 50;
-	int mapSize = 100;
+	int mapSize = 200;
 	CvPoint draw_oringin[2];
 	CvPoint draw_car[6];
 	CvPoint LR_speed[4];
@@ -940,7 +946,7 @@ UINT CLRF_controlDlg::ThreadFun_car_draw(LPVOID lParam)
 			y_save.push_back(700 - (y_here * mapSize + orgin.y));
 
 
-			if (jump_draw % 20 == 0 )
+			if (jump_draw % 40 == 0 )
 			{
 				draw_car[0] = cvPoint(x_here * mapSize + carsize * cos(zdir_here + 0.7854) + orgin.x, 700 - (y_here * mapSize + carsize * sin(zdir_here + 0.7854) + orgin.y));
 				draw_car[1] = cvPoint(x_here * mapSize + carsize * cos(0.7854 - zdir_here) + orgin.x, 700 - (y_here * mapSize - carsize * sin(0.7854 - zdir_here) + orgin.y));
@@ -1028,7 +1034,7 @@ UINT CLRF_controlDlg::ThreadFun_car_draw(LPVOID lParam)
 
 		for (int i = 0; i < x_save.size() - 1; i++)
 		{
-			cvLine(draw_data, cvPoint((int)x_save[i], (int)y_save[i]), cvPoint((int)x_save[i + 1], (int)y_save[i + 1]), CV_RGB(150, 150, 255), 1);
+			cvLine(draw_data, cvPoint((int)x_save[i], (int)y_save[i]), cvPoint((int)x_save[i + 1], (int)y_save[i + 1]), CV_RGB(150, 150, 255), 2);
 		}
 
 
@@ -1040,10 +1046,10 @@ UINT CLRF_controlDlg::ThreadFun_car_draw(LPVOID lParam)
 		CvvImage show1;
 		show1.CopyOf(draw_data);
 		show1.Show(*dc, 0, 0, draw_data->width, draw_data->height);
-
+//		cvSaveImage("CAR4.png", draw_data);
 		memset((unsigned char*)draw_data->imageData, 0, draw_data->imageSize);
 
-		Sleep(1);
+		Sleep(20);
 	}
 
 
@@ -1054,88 +1060,6 @@ UINT CLRF_controlDlg::ThreadFun_car_draw(LPVOID lParam)
 	return(0);
 }
 
-void CRSocket::OnReceive(int nErrorCode) {
-
-	static unsigned int counter(0);
-
-	if (0 == nErrorCode) {
-		static int i = 0;
-		i++;
-
-		int nRead(0);
-
-		volatile int cbLeft(SIZE_POSE_DATA*sizeof(double)); // 4 Byte
-		volatile int cbDataReceived(0);
-		int cTimesRead(0);
-		do {
-
-
-			// Determine Socket State
-			nRead = Receive((byte*)&m_pose_data + cbDataReceived, cbLeft);
-
-			if (nRead == SOCKET_ERROR) {
-				if (GetLastError() != WSAEWOULDBLOCK) {
-					AfxMessageBox(_T("Error occurred"));
-					Close();
-				}
-				break;
-			}
-
-
-			cbLeft -= nRead;
-			cbDataReceived += nRead;
-			cTimesRead++;
-		} while (cbLeft > 0 && cTimesRead < 50);
-
-	}
-
-	m_pose_data_static[0] = m_pose_data[0];
-	m_pose_data_static[1] = m_pose_data[1];
-	m_pose_data_static[2] = m_pose_data[2];
-
-	//CListBox* aListBox = (CListBox*)m_parent->GetDlgItem(IDC_SENSOR_DATA);
-	//aListBox->SetRedraw(false);
-	//aListBox->ResetContent();
-// 	char buffer[50];
-// 	sprintf_s(buffer, 50, "%2.4lf : %2.4lf : %2.4lf | %d",
-// 		m_pose_data[0], m_pose_data[1], m_pose_data[2], counter++);
-	//aListBox->AddString(CString(buffer));
-	//aListBox->SetRedraw(true);
-
-	// ***********************************
-	// Show the Pose data to User
-	// ***********************************
-	// 	m_parent->GetDlgItem(IDC_POS_DATA)->SetWindowTextW(CString(buffer));
-	// 
-	// 	CDC *pDC = m_parent->GetDlgItem(IDC_POS_SHOW)->GetDC();
-	// 	pDC->SetDCBrushColor(RGB(0, 0, 0));
-	// 	pDC->Ellipse(0, 0, 200, 200);
-	// 	pDC->SetDCPenColor(RGB(255, 255, 255));
-	// 	pDC->MoveTo(100, 100);
-	// 	pDC->LineTo(100 + 50*sin(m_pose_data[2]), 100 + 50*cos(m_pose_data[2]));
-	// 	pDC->Ellipse(
-	// 		100 + 50 * sin(m_pose_data[2]) -3,
-	// 		100 + 50 * cos(m_pose_data[2]) -3,
-	// 		100 + 50 * sin(m_pose_data[2]) +3,
-	// 		100 + 50 * cos(m_pose_data[2]) +3);
-	// 	pDC->MoveTo(100, 25);
-	// 	CString aDegree;
-	// 	aDegree.Format(L"Yaw(Deg): %lf3.2", m_pose_data[2] * 180 / 3.1415926);
-	// 	pDC->TextOutW(10, 215, aDegree);
-
-
-	CSocket::OnReceive(nErrorCode);
-}
-
-BOOL CRSocket::OnMessagePending() {
-
-
-	return 0;
-}
-
-void CRSocket::registerParent(CWnd* _parent) {
-	m_parent = _parent;
-}
 
 void CLRF_controlDlg::I90_PWM_send(int L_PWM, int R_PWM)
 {
@@ -1190,3 +1114,50 @@ unsigned char CLRF_controlDlg::checksun(int nStar, int nEnd)
 }
 
 
+
+void CPSocket::OnReceive(int nErrorCode) {
+	static int counter(0);
+	counter++;
+
+	if (0 == nErrorCode) {
+
+		static int i = 0;
+		i++;
+
+		int nRead(0);
+
+		volatile int cbLeft(sizeof(PoseData)); // 4 Byte
+		volatile int cbDataReceived(0);
+		int cTimesRead(0);
+		do {
+
+
+			// Determine Socket State
+			nRead = Receive(&m_pose_data + cbDataReceived, cbLeft);
+
+			if (nRead == SOCKET_ERROR) {
+				if (GetLastError() != WSAEWOULDBLOCK) {
+					//AfxMessageBox(_T("Error occurred"));
+					Close();
+					// Trying to reconnect
+					((CLRF_controlDlg*)m_parent)->DoPoseSocketConnect();
+					return;
+				}
+				break;
+			}
+
+
+			cbLeft -= nRead;
+			cbDataReceived += nRead;
+			cTimesRead++;
+		} while (cbLeft > 0 && cTimesRead < 50);
+	}
+
+	m_pose_data_2 = m_pose_data;
+
+	CSocket::OnReceive(nErrorCode);
+}
+
+void CPSocket::registerParent(CWnd* _parent) {
+	m_parent = _parent;
+}

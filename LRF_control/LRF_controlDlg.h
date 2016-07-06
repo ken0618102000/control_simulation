@@ -6,13 +6,13 @@
 #include "afxcmn.h"
 #include "afxwin.h"
 #include <afxsock.h>
-#include "RSocket.h"
 #include <fstream>
 #include <vector>
 #include "CvvImage.h"  
 #include <cv.h>
 #include <highgui.h>
 #include <ctype.h>
+#include "PSocket.h"
 
 using namespace std;
 using namespace cv;
@@ -56,14 +56,13 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 
-	CRSocket m_socket;
-	template<size_t LENGTH> void SendSocketMessage(char(&data)[LENGTH]);
-
-private:
-	void DoSocketConnect();
-	void DoSocketDisconnect();
-	void CLRF_controlDlg::ReportSocketStatus(TCPEvent event_, CString &msg = CString(""));
-	bool fg_connected;
+public:
+	void DoPoseSocketConnect();
+	void DoPoseSocketDisconnect();
+	void ReportSocketStatus(TCPEvent event_, CString &msg = CString(""));
+	bool fg_pose_connected;
+	CPSocket m_socket_pose;
+	UINT m_socket_pose_port;
 
 	//---------thread TARGET_control------------
 private:

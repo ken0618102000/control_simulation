@@ -33,7 +33,7 @@
     <ClInclude Include="Resource.h">
       <Filter>標頭檔</Filter>
     </ClInclude>
-    <ClInclude Include="RSocket.h">
+    <ClInclude Include="PSocket.h">
       <Filter>標頭檔</Filter>
     </ClInclude>
   </ItemGroup>
