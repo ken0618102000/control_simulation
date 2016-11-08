@@ -18,7 +18,7 @@ clc;clear all;close;
     plot(x2,y2,'r','LineWidth',2);hold on;
 %     plot(x1,y1,'r','LineWidth',1);hold on;
     
-   for i=1:100:size(x1,1)
+   for i=1:50:size(x1,1)
        %%if((((x(i+1)-x(i))^2+y(i+1)-y(i))^2) < 6) 
         
         
@@ -37,9 +37,9 @@ clc;clear all;close;
   plot(rotated_cornerR(1,:), rotated_cornerR(2,:),'--black','LineWidth',2.5); hold on;
   plot([x1(i)-0 rotated_arrowR(1)],[y1(i)-0 rotated_arrowR(2)],'--black','LineWidth',1.5); hold on;
   
-title('\fontsize{14} \fontname{Times New Roman} trajectory')
-xlabel('\fontsize{14} \fontname{Times New Roman} m');
-ylabel('\fontsize{16} \fontname{Times New Roman} m');
+title('\fontsize{18} \fontname{Times New Roman} trajectory')
+xlabel('\fontsize{18} \fontname{Times New Roman} m');
+ylabel('\fontsize{18} \fontname{Times New Roman} m');
   
 %axis([-1.5,1.5,-2,1.5]);
 grid on;axis equal;

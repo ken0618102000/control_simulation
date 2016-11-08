@@ -95,4 +95,7 @@ public:
 	static unsigned char checksun(int nStar, int nEnd);
 	afx_msg void OnBnClickedconnect();
 	afx_msg void OnBnClickedstop();
+	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
+	afx_msg void OnBnClickedButtonspeedup();
 };

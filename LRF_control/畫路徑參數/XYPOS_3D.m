@@ -14,11 +14,12 @@ clc;clear all;close;
     for i=0:5:size(x1,1)
        x2(1+ i/5)=x1(i+1);
        y2(1+ i/5)=y1(i+1);
+       time2(1+ i/5)=time(i+1);
     end
-    plot(x2,y2,'r','LineWidth',2);hold on;
+    plot3(x2,y2,time2,'r','LineWidth',2);hold on;
 %     plot(x1,y1,'r','LineWidth',1);hold on;
     
-   for i=1:50:size(x1,1)
+   for i=1:100:size(x1,1)
        %%if((((x(i+1)-x(i))^2+y(i+1)-y(i))^2) < 6) 
         
         
@@ -26,11 +27,12 @@ clc;clear all;close;
            rotationM = [cos(angle1(i))  -sin(angle1(i)) ; sin(angle1(i))  cos(angle1(i))];
            rotated_cornerR = rotationM * cornerR + [x1(i) 0;0 y1(i)]*ones(size(cornerR));
            rotated_arrowR = rotationM * arrowR + [x1(i) y1(i)]';    
-           plot(rotated_cornerR(1,:), rotated_cornerR(2,:),'g-','LineWidth',2.5); hold on;
-           plot([x1(i) rotated_arrowR(1)],[y1(i) rotated_arrowR(2)],'b-','LineWidth',1.5); hold on;
+           time_vector = [time(i) time(i) time(i) time(i) time(i)];
+           plot3(rotated_cornerR(1,:), rotated_cornerR(2,:),time_vector,'g-','LineWidth',2.5); hold on;
+           plot3([x1(i) rotated_arrowR(1)],[y1(i) rotated_arrowR(2)],[time(i) time(i)],'b-','LineWidth',1.5); hold on;
            if i==1;
-                plot(rotated_cornerR(1,:), rotated_cornerR(2,:),'r-','LineWidth',2.5); hold on;
-                plot([x1(i) rotated_arrowR(1)],[y1(i) rotated_arrowR(2)],'r-','LineWidth',1.5); hold on;
+                plot3(rotated_cornerR(1,:), rotated_cornerR(2,:),time_vector,'r-','LineWidth',2.5); hold on;
+                plot3([x1(i) rotated_arrowR(1)],[y1(i) rotated_arrowR(2)],[time(i) time(i)],'r-','LineWidth',1.5); hold on;
            end
       %% end
    end
@@ -38,15 +40,16 @@ clc;clear all;close;
   rotationM = [cos(angle1(size(x1,1)))  -sin(angle1(size(x1,1))) ; sin(angle1(size(x1,1)))  cos(angle1(size(x1,1)))];
   rotated_cornerR = rotationM * cornerR + [x1(size(x1,1)) 0;0 y1(size(x1,1))]*ones(size(cornerR));
   rotated_arrowR = rotationM * arrowR + [x1(size(x1,1)) y1(size(x1,1))]';  
-  plot(rotated_cornerR(1,:), rotated_cornerR(2,:),'--black','LineWidth',2.5); hold on;
-  plot([x1(size(x1,1)) rotated_arrowR(1)],[y1(size(x1,1)) rotated_arrowR(2)],'--black','LineWidth',1.5); hold on;
+  time_vector = [time(size(x1,1)) time(size(x1,1)) time(size(x1,1)) time(size(x1,1)) time(size(x1,1))];
+  plot3(rotated_cornerR(1,:), rotated_cornerR(2,:),time_vector,'--black','LineWidth',2.5); hold on;
+  plot3([x1(size(x1,1)) rotated_arrowR(1)],[y1(size(x1,1)) rotated_arrowR(2)],[time(size(x1,1)) time(size(x1,1))],'--black','LineWidth',1.5); hold on;
   
 title('\fontsize{14} \fontname{Times New Roman} trajectory');
-xlabel('\fontsize{14} \fontname{Times New Roman} m');
+xlabel('\fontsize{16} \fontname{Times New Roman} m');
 ylabel('\fontsize{16} \fontname{Times New Roman} m');
+zlabel('\fontsize{16} \fontname{Times New Roman} ms');
  % axis([-0.5,2.5,-2.5,0.5]);grid on;
-   
-   grid on;
+grid on;
  
 
    
