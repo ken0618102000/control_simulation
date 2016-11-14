@@ -25,7 +25,7 @@ bool CLRF_controlDlg::carFLAG = true;
 //double CRSocket::m_pose_data_static[SIZE_POSE_DATA] = { 0 };
 PoseData CPSocket::m_pose_data_2;
 CSerial Connect_I90;
-int upupup = 0;
+double upupup = 0;
 
 struct THREAD_INFO_TARGET_control
 {
@@ -40,7 +40,7 @@ struct THREAD_INFO_car_draw
 }Thread_Info_car_draw;
 
 // 癸 App About ㄏノ CAboutDlg 癸杠よ遏
-int c_Synchronous = 300;
+int c_Synchronous = 0;
 char I90_PWM_control[15] = {
 	94,    //0  STX  0x5e|0x02
 	2,		//1  STX
@@ -371,7 +371,7 @@ void CLRF_controlDlg::OnBnClickedSTART()
 
 void CLRF_controlDlg::OnBnClickedButtonspeedup()
 {
-	upupup = upupup + 20;
+	upupup = upupup - 0.1;
 }
 
 UINT CLRF_controlDlg::ThreadFun_TARGET_control(LPVOID lParam)
@@ -380,7 +380,7 @@ UINT CLRF_controlDlg::ThreadFun_TARGET_control(LPVOID lParam)
 	CLRF_controlDlg * hWnd = (CLRF_controlDlg *)CWnd::FromHandle((HWND)Thread_Info->hWnd);
 
 
-	CString str_Value, str_Value2, str_Value3, str_Value4, str_Value5, str_Value6, str_Value7, str_Value8, str_Value9;
+	CString str_Value, str_Value2, str_Value3, str_Value4, str_Value5, str_Value6, str_Value7, str_Value8, str_Value9, str_Value10;
 	CStatic * Static_num = (CStatic *)hWnd->GetDlgItem(IDC_STATIC_roh);
 	CStatic * Static_num2 = (CStatic *)hWnd->GetDlgItem(IDC_STATIC_theta);
 	CStatic * Static_num3 = (CStatic *)hWnd->GetDlgItem(IDC_STATIC_angle);
@@ -390,12 +390,13 @@ UINT CLRF_controlDlg::ThreadFun_TARGET_control(LPVOID lParam)
 	CStatic * Static_num7 = (CStatic *)hWnd->GetDlgItem(IDC_STATIC_VR);
 	CStatic * Static_num8 = (CStatic *)hWnd->GetDlgItem(IDC_STATIC_VL);
 	CStatic * Static_num9 = (CStatic *)hWnd->GetDlgItem(IDC_STATIC_speed);
+	CStatic * Static_num10 = (CStatic *)hWnd->GetDlgItem(IDC_STATIC_time);
 
 	LARGE_INTEGER tStart, tEnd, ts;
 
-	target_pos[0] = 0.64;
-	target_pos[1] = -1.69;
-	target_pos[2] = 0;  //臂锣à
+	target_pos[0] = 0;
+	target_pos[1] = 1;
+	target_pos[2] = PI/2;  //臂锣à
 
 	int state = 1;
 	int rho_gain;
@@ -410,7 +411,7 @@ UINT CLRF_controlDlg::ThreadFun_TARGET_control(LPVOID lParam)
 	double beta = 0;
 	double phi = 0;
 	double car_past_x = 0, car_past_y = 0, car_speed2 = 0;
-	sampleTime = 30; //睝
+	sampleTime = 10; //睝
 
 	remove("control_output.txt");
 	remove("control_output_m.txt");
@@ -463,10 +464,10 @@ UINT CLRF_controlDlg::ThreadFun_TARGET_control(LPVOID lParam)
 #if 1
 
 		//﹍絬┦北
-		vr = 3 * rho + 0.15 * (8 * alpha - 4 * (beta));
-		vl = 3 * rho - 0.15 * (8 * alpha - 4 * (beta));
-		vr = vr / 10;
-		vl = vl / 10;
+// 		vr = 3 * rho + 0.15 * (8 * alpha - 4 * (beta));
+// 		vl = 3 * rho - 0.15 * (8 * alpha - 4 * (beta));
+// 		vr = vr / 10;
+// 		vl = vl / 10;
 #else
 		//耞璶ち传贺家ΑTS-FUZZY
 		if (times == 0 || alpha > (PI / 10) || alpha < (-PI / 10))
@@ -554,8 +555,8 @@ UINT CLRF_controlDlg::ThreadFun_TARGET_control(LPVOID lParam)
 
 			vr = rho_gain * rho + 0.15 * (alpha_gain * alpha - beta_gain * (beta));
 			vl = rho_gain * rho - 0.15 * (alpha_gain * alpha - beta_gain * (beta));
-			vr = vr*0.3;
-			vl = vl*0.3;
+// 			vr = vr*0.3;
+// 			vl = vl*0.3;
 			break;
 
 		default:
@@ -581,18 +582,18 @@ UINT CLRF_controlDlg::ThreadFun_TARGET_control(LPVOID lParam)
 
 
 
-		vr = vr * 4500;
-		vl = vl * 4500;
-
-		if (vr > 0)
-			vr = vr + 8100;
-		else
-			vr = vr - 8100;
-
-		if (vl > 0)
-			vl = vl + 8100;
-		else
-			vl = vl - 8100;
+// 		vr = vr * 4500;
+// 		vl = vl * 4500;
+// 
+// 		if (vr > 0)
+// 			vr = vr + 8100;
+// 		else
+// 			vr = vr - 8100;
+// 
+// 		if (vl > 0)
+// 			vl = vl + 8100;
+// 		else
+// 			vl = vl - 8100;
 
 		// 		if (state == 3)
 		// 		{
@@ -607,6 +608,8 @@ UINT CLRF_controlDlg::ThreadFun_TARGET_control(LPVOID lParam)
 		// 				vl = vl + 150;
 		// 		}
 
+
+//		I90_Speed2PWM(vl_draw, vr_draw, vl, vr);
 //		I90_PWM_send(vl, vr);
 
 		str_Value.Format(_T("%f"), rho);
@@ -662,6 +665,10 @@ UINT CLRF_controlDlg::ThreadFun_TARGET_control(LPVOID lParam)
 			car_past_x = car_x;
 			car_past_y = car_y;
 		}
+
+
+		str_Value10.Format(_T("%d"), m_time);
+		Static_num10->SetWindowText(str_Value10);
 
 		app_control_m
 			<< setw(15) << setprecision(4) << rho
@@ -1102,14 +1109,14 @@ void CLRF_controlDlg::I90_PWM_send(int L_PWM, int R_PWM)
 {
 	int L, R, mid = 16384; //0~32767
 
-	if (R_PWM > 0)
-		R_PWM = R_PWM + c_Synchronous;
-
-	if (R_PWM < 0)
-	{
-		L_PWM = L_PWM - c_Synchronous;
-		R_PWM = R_PWM;
-	}
+// 	if (R_PWM > 0)
+// 		R_PWM = R_PWM + c_Synchronous;
+// 
+// 	if (R_PWM < 0)
+// 	{
+// 		L_PWM = L_PWM - c_Synchronous;
+// 		R_PWM = R_PWM;
+// 	}
 
 	//L.R.锣传
 	L = mid + L_PWM;
@@ -1124,6 +1131,80 @@ void CLRF_controlDlg::I90_PWM_send(int L_PWM, int R_PWM)
 	//I90rs232.Open(7,115200);
 	Connect_I90.SendData(I90_PWM_control, sizeof(I90_PWM_control));
 }
+
+void CLRF_controlDlg::I90_Speed2PWM(double i_L_Speed, double i_R_Speed, double &o_L_PWM, double &o_R_PWM)
+{
+	//ΩΡ絬笹(オ近)y = -1E-07x2 - 7E-06x + 0.8064
+	//ΩΡ絬笹(オ近)y = -3E-11x3 + 4E-08x2 - 0.0002x + 0.8417
+	//ΩΡ絬笹(オ近)y = 6E-14x4 - 4E-10x3 + 7E-07x2 - 0.0006x + 0.896
+	//きΩΡ絬笹(オ近)y = 9E-17x5 - 5E-13x4 + 1E-09x3 - 9E-07x2 + 7E-05x + 0.8381
+
+	//ΩΡ絬笹(近)y = -1E-07x2 - 1E-04x + 0.7581
+	//ΩΡ絬笹(近)y = 6E-11x3 - 3E-07x2 + 8E-05x + 0.7249
+	//ΩΡ絬笹(近)y = 1E-13x4 - 6E-10x3 + 7E-07x2 - 0.0004x + 0.781
+	//きΩΡ絬笹(近)y = 5E-17x5 - 1E-13x4 - 7E-11x3 + 2E-07x2 - 0.0003x + 0.7697
+
+	double temp_L, temp_L2 = 1, temp_R, temp_R2 = 1, i;
+	double index_L, index_R;
+
+
+	for (i = 0; i < 2774; i++)
+	{
+		if (i_L_Speed > 0)
+		{
+//			temp_L = (-2E-07*pow(i, 2) - 1E-05*i + 1.4127);
+// 			temp_L = (-3E-11*pow(i, 3) + 4E-08*pow(i, 2) - 0.0002*i + 0.8417)*2;
+			temp_L =( 6E-12*pow(i, 4) - 1E-8*pow(i, 3) + 9E-06*pow(i, 2) - 0.0028*i + 0.7674);
+		}
+		else
+		{
+//			temp_L = -(-2E-07*pow(i, 2) - 1E-05*i + 1.4127);
+// 			temp_L = -(-3E-11*pow(i, 3) + 4E-08*pow(i, 2) - 0.0002*i + 0.8417)*2;
+ 			temp_L =-(6E-12*pow(i, 4) - 1E-8*pow(i, 3) + 9E-06*pow(i, 2) - 0.0028*i + 0.7674);
+		}
+
+		if (i_R_Speed > 0)
+		{
+//			temp_R = (-2E-07*pow(i, 2) - 2E-04*i + 1.5161);
+// 			temp_R = (6E-11*pow(i, 3) - 3E-07*pow(i, 2) + 8E-05*i + 0.7249)*2;
+ 			temp_R = (2E-12*pow(i, 4) + 2E-9*pow(i, 3) + 1E-06*pow(i, 2) - 0.00016*i + 0.7757);
+		}
+		else
+		{
+//			temp_R = (-(-2E-07*pow(i, 2) - 2E-04*i + 1.5161));
+// 			temp_R = -(6E-11*pow(i, 3) - 3E-07*pow(i, 2) + 8E-05*i + 0.7249)*2;
+ 			temp_R = -(2E-12*pow(i, 4) + 2E-9*pow(i, 3) + 1E-06*pow(i, 2) - 0.00016*i + 0.7757);
+		}
+
+	
+
+		if (abs(temp_L - i_L_Speed) < temp_L2)
+		{
+			temp_L2 = abs(temp_L - i_L_Speed);
+			index_L = i;
+		}
+
+		if (abs(temp_R - i_R_Speed) < temp_R2)
+		{
+			temp_R2 = abs(temp_R - i_R_Speed);
+			index_R = i;
+		}
+	}
+
+	//ΩΡ絬笹(オ近PWM)y = -0.0002x + 1.2915
+	//ΩΡ絬笹(近PWM)y = -0.0002x + 1.292
+	if (i_L_Speed > 0)
+		o_L_PWM = (-0.0002*index_L + 0.926) * 10000;
+	else
+		o_L_PWM = -((-0.0002*index_L + 0.926) * 10000);
+
+	if (i_R_Speed > 0)
+		o_R_PWM = (-0.0002*index_R + 0.9348) * 10000;
+	else
+		o_R_PWM = -((-0.0002*index_R + 0.9348) * 10000);
+
+}
+
 
 unsigned char CLRF_controlDlg::checksun(int nStar, int nEnd)
 {
@@ -1211,32 +1292,44 @@ BOOL CLRF_controlDlg::PreTranslateMessage(MSG* pMsg)
 {
 	// TODO:  疭﹚祘Α絏㎝ (┪) ㊣膀┏摸
 
-	int Lpwm1 = 9300 + upupup, Rpwm1 = 9300 + upupup;
-	int Lpwm2 = -9300 - upupup, Rpwm2 = -9300 - upupup;
-	int Lpwm3 = -9300 - upupup, Rpwm3 = 9300 + upupup;
-	int Lpwm4 = 9300 + upupup, Rpwm4 = -9300 - upupup;
-	int Lpwm5 = 0, Rpwm5 = 9300 + upupup;
-	int Lpwm6 = 9300 + upupup, Rpwm6 = 0;
+	double Lspeed1 = 0.8 + upupup, Rspeed1 = 0.8 + upupup;
+	double Lspeed2 = -0.8 - upupup, Rspeed2 = -0.8 - upupup;
+	double Lspeed3 = -0.8 - upupup, Rspeed3 = 0.8 + upupup;
+	double Lspeed4 = 0.8 + upupup, Rspeed4 = -0.8 - upupup;
+	double Lspeed5 = 0, Rspeed5 = 0.8 + upupup;
+	double Lspeed6 = 0.8 + upupup, Rspeed6 = 0;
 
 	if (pMsg->message == WM_KEYDOWN)
 	{
 		switch (pMsg->wParam)
 		{
 		case 0x57:
-			I90_PWM_send(Lpwm1, Rpwm1);  break;
+			I90_Speed2PWM(Lspeed1, Rspeed1, Lspeed1, Rspeed1);
+			I90_PWM_send(Lspeed1, Rspeed1); 
+			vl = Lspeed1;
+			vr = Rspeed1;
+			break;
 		case 0x53:
-			I90_PWM_send(Lpwm2, Rpwm2); break;
+			I90_Speed2PWM(Lspeed2, Rspeed2, Lspeed2, Rspeed2);
+			I90_PWM_send(Lspeed2, Rspeed2); 
+			vl = Lspeed2;
+			vr = Rspeed2; 
+			break;
 		case 0x41:
-			I90_PWM_send(Lpwm3, Rpwm3); break;
+			I90_Speed2PWM(Lspeed3, Rspeed3, Lspeed3, Rspeed3);
+			I90_PWM_send(Lspeed3, Rspeed3); break;
 		case 0x44:
-			I90_PWM_send(Lpwm4, Rpwm4); break;
+			I90_Speed2PWM(Lspeed4, Rspeed4, Lspeed4, Rspeed4);
+			I90_PWM_send(Lspeed4, Rspeed4); break;
 		case 0x51:
-			I90_PWM_send(Lpwm5, Rpwm5); 
-			upupup = upupup + 20;
+			I90_Speed2PWM(Lspeed5, Rspeed5, Lspeed5, Rspeed5);
+			I90_PWM_send(Lspeed5, Rspeed5); 
+			upupup = upupup + 0.1;
 			break;
 		case 0x45:
-			I90_PWM_send(Lpwm6, Rpwm6); 
-			upupup = upupup + 20;
+			I90_Speed2PWM(Lspeed6, Rspeed1, Lspeed6, Rspeed6);
+			I90_PWM_send(Lspeed6, Rspeed6); 
+			upupup = upupup + 0.1;
 			break;
 		case VK_F2:
 			I90_PWM_send(0, 0); break;

@@ -92,6 +92,7 @@ public:
 	static bool carFLAG;
 	CStatic m_PATH_c;
 	static void I90_PWM_send(int L_PWM, int R_PWM);
+	static void I90_Speed2PWM(double i_L_Speed, double i_R_Speed, double &o_L_PWM, double &o_R_PWM);
 	static unsigned char checksun(int nStar, int nEnd);
 	afx_msg void OnBnClickedconnect();
 	afx_msg void OnBnClickedstop();
